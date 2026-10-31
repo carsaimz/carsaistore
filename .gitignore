@@ -1,0 +1,19 @@
+# Dependências e build
+node_modules/
+dist/
+
+# Ambiente (tokens de API opcionais — nunca versionar)
+.env
+.env.local
+.env.*.local
+
+# Nativos gerados pelo Capacitor (descomente se preferir não versioná-los)
+# android/
+# ios/
+
+# Sistema / IDE
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/
