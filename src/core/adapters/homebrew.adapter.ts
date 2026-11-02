@@ -1,6 +1,6 @@
 import type { AppItem } from '../models/AppItem';
 import type { SourceAdapter } from './SourceAdapter';
-import { nomeArquivoDeUrl, nowIso } from '../util';
+import { nomeArquivoDeUrl, nowIso, urlRepoGitHub } from '../util';
 
 const CASKS_URL = 'https://formulae.brew.sh/api/cask.json';
 
@@ -49,6 +49,7 @@ export class HomebrewAdapter implements SourceAdapter {
         source: 'homebrew',
         downloadUrl: url && nomeArquivo ? url : null,
         fallbackUrl: cask.homepage ?? null,
+        repoUrl: urlRepoGitHub(cask.homepage),
         fileName: url && nomeArquivo ? nomeArquivo : null,
         sizeBytes: null,
         version: cask.version,

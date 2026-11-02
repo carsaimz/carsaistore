@@ -8,9 +8,15 @@ import { nowIso } from '../core/util';
  */
 export interface AppCache {
   /** Insere/atualiza itens de uma fonte e registra fetchedAt dela. */
-  upsertMany(source: SourceId, items: AppItem[]): Promise<void>;
+  upsertMany(
+    source: SourceId,
+    items: AppItem[],
+    options?: { /** false = não marcar a fonte como recém-coletada (busca pontual). */
+      tocarMeta?: boolean },
+  ): Promise<void>;
   getById(id: string): Promise<AppItem | null>;
   getByPlatform(platform: Platform): Promise<AppItem[]>;
+  getAll(): Promise<AppItem[]>;
   countByPlatform(platform: Platform): Promise<number>;
   search(platform: Platform, term: string): Promise<AppItem[]>;
   lastFetchedAt(source: SourceId): Promise<string | null>;
@@ -66,13 +72,19 @@ export class IdbAppCache implements AppCache {
     return this.db;
   }
 
-  async upsertMany(source: SourceId, items: AppItem[]): Promise<void> {
+  async upsertMany(
+    source: SourceId,
+    items: AppItem[],
+    options: { tocarMeta?: boolean } = {},
+  ): Promise<void> {
     const db = await this.abrir();
     const tx = db.transaction([STORE_APPS, STORE_META], 'readwrite');
     const apps = tx.objectStore(STORE_APPS);
     const meta = tx.objectStore(STORE_META);
     for (const item of items) apps.put(item);
-    meta.put({ chave: `fetched:${source}`, valor: nowIso() } satisfies MetaRecord);
+    if (options.tocarMeta !== false) {
+      meta.put({ chave: `fetched:${source}`, valor: nowIso() } satisfies MetaRecord);
+    }
     await esperarTransacao(tx);
   }
 
@@ -90,6 +102,12 @@ export class IdbAppCache implements AppCache {
       tx.objectStore(STORE_APPS).index('platform').getAll(platform),
     )) as AppItem[];
     return regs;
+  }
+
+  async getAll(): Promise<AppItem[]> {
+    const db = await this.abrir();
+    const tx = db.transaction(STORE_APPS, 'readonly');
+    return pedir(tx.objectStore(STORE_APPS).getAll()) as Promise<AppItem[]>;
   }
 
   async countByPlatform(platform: Platform): Promise<number> {
@@ -118,7 +136,6 @@ export class IdbAppCache implements AppCache {
     )) as MetaRecord | undefined;
     return reg?.valor ?? null;
   }
-
   async clear(): Promise<void> {
     const db = await this.abrir();
     const tx = db.transaction([STORE_APPS, STORE_META], 'readwrite');
@@ -132,9 +149,13 @@ export class MemoryAppCache implements AppCache {
   private itens = new Map<string, AppItem>();
   private meta = new Map<string, string>();
 
-  async upsertMany(source: SourceId, items: AppItem[]): Promise<void> {
+  async upsertMany(
+    source: SourceId,
+    items: AppItem[],
+    options: { tocarMeta?: boolean } = {},
+  ): Promise<void> {
     for (const item of items) this.itens.set(item.id, item);
-    this.meta.set(`fetched:${source}`, nowIso());
+    if (options.tocarMeta !== false) this.meta.set(`fetched:${source}`, nowIso());
   }
 
   async getById(id: string): Promise<AppItem | null> {
@@ -143,6 +164,10 @@ export class MemoryAppCache implements AppCache {
 
   async getByPlatform(platform: Platform): Promise<AppItem[]> {
     return [...this.itens.values()].filter((a) => a.platform === platform);
+  }
+
+  async getAll(): Promise<AppItem[]> {
+    return [...this.itens.values()];
   }
 
   async countByPlatform(platform: Platform): Promise<number> {

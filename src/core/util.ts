@@ -1,7 +1,13 @@
 /** Utilidades partilhadas pelos adaptadores e pela UI. */
+import type { AppItem } from './models/AppItem';
 
 export function nowIso(): string {
   return new Date().toISOString();
+}
+
+/** Minúsculas + sem acentos, para busca tolerante (“codigo” acha “Código”). */
+export function normalizar(texto: string): string {
+  return texto.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
 export function truncate(texto: string, max = 400): string {
@@ -91,4 +97,33 @@ export function nomeArquivoDeUrl(url: string): string | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Se `url` aponta para o GitHub, devolve a raiz do repositório
+ * (`https://github.com/{owner}/{repo}`); senão null. Aceita URLs de release,
+ * /tree, /blob, issues, etc.
+ */
+export function urlRepoGitHub(url: string | null | undefined): string | null {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    if (u.hostname !== 'github.com' && u.hostname !== 'www.github.com') return null;
+    const partes = u.pathname.split('/').filter(Boolean);
+    if (partes.length < 2) return null;
+    const [owner, repo] = partes as [string, string];
+    if (owner.toLowerCase() === 'topics' || owner.toLowerCase() === 'features') return null;
+    return `https://github.com/${owner}/${repo.replace(/\.git$/, '')}`;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Melhor URL de repositório GitHub conhecida para um app:
+ * 1. campo explícito `repoUrl`; 2. derivada do `fallbackUrl`.
+ */
+export function repoUrlDe(app: AppItem): string | null {
+  if (app.repoUrl) return app.repoUrl;
+  return urlRepoGitHub(app.fallbackUrl);
 }

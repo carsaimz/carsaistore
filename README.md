@@ -31,17 +31,34 @@ Winget         ─┘
 - **`DownloadService`** (`src/core/download/DownloadService.ts`):
   `@capacitor/file-transfer` → `Documentos/Downloads/{fileName}`; falha → abre `fallbackUrl`
   com `window.open(url, '_system')`; sem fallback → estado “Download indisponível no momento”.
+- **`SearchService`** (`src/core/search/SearchService.ts`): busca 100% local sobre o cache —
+  insensível a acentos/maiúsculas, por palavras (ordem livre) e **ranqueada**
+  (nome > id > developer > tags > descrição), em **todas as plataformas**
+  (a UI agrupa por aba). Com poucos resultados locais, um botão explícito busca o termo
+  no GitHub e grava os itens no cache (nunca dispara sincronização automática).
 
 ## Fontes de dados
 
 | Fonte | Plataforma | Download direto | Observações |
 | --- | --- | --- | --- |
 | **F-Droid** (`index-v2.json`) | Android | ✅ APK | Índice grande (~dezenas de MB); coletado 1× por sincronização. |
-| **GitHub** (Search + Releases) | Android/Desktop | ✅ asset da release | Só assets com extensões de app (`.apk .aab .ipa .dmg .pkg .exe .msi .msix .appimage .deb .rpm`); release sem app é ignorada. 60 req/h sem token — configure `VITE_GITHUB_TOKEN`. |
+| **GitHub** (Search + Releases) | Android/Desktop | ✅ asset da release | Só assets com extensões de app (`.apk .aab .ipa .dmg .pkg .exe .msi .msix .appimage .deb .rpm`); release sem app é ignorada. 60 req/h sem token — configure `VITE_GITHUB_TOKEN`. Busca remota por termo (`owner/repo` funciona direto). |
 | **iTunes Search** (`price=0`, `entity=software`) | iOS | ❌ (por definição) | Apple não fornece binário: o botão nasce como “Abrir na loja” (`trackViewUrl`). |
 | **Homebrew Casks** (`cask.json`) | Desktop (macOS) | ✅ se extensão inferível | Sem extensão clara → fallback para a homepage. |
 | **Flathub** (`/api/v2/appstream`) | Desktop (Linux) | ✅ `.flatpakref` | Lista de IDs é barata; detalhes são enriquecidos em lotes rotativos de 150 apps por sincronização. |
 | **Winget** (API comunitária) | Desktop (Windows) | ❌ | Serviço instável e com `X-API-Key`; fallback aponta para o manifest em `microsoft/winget-pkgs`. Em produção, consuma os manifests JSON diretamente. |
+
+## Busca e “Ver no GitHub”
+
+- **Busca entre plataformas**: com um termo ativo, as abas são ignoradas e os resultados
+  aparecem agrupados (`Android (n) · iOS (n) · Desktop (n)`), ranqueados por relevância.
+  Trocar de aba ou pressionar `Esc` limpa a busca.
+- **Busca remota no GitHub**: se o catálogo local tem menos de 3 resultados, aparece o botão
+  **“Não encontrou? Buscar “termo” no GitHub”**. É uma ação explícita: os resultados entram
+  no cache e passam a fazer parte do catálogo (inclusive na aba correspondente).
+- **“Ver no GitHub”**: apps com repositório conhecido (fonte GitHub, ou homepage no GitHub
+  detectada no Homebrew/Flathub/fallback) mostram um botão-ícone no card e um botão
+  “Ver no GitHub” na página de detalhe.
 
 ## Requisitos
 
@@ -103,11 +120,12 @@ src/
 │   │   ├── homebrew.adapter.ts
 │   │   ├── flathub.adapter.ts
 │   │   └── winget.adapter.ts
+│   ├── search/SearchService.ts      # busca local ranqueada + busca remota no GitHub
 │   ├── sync/SyncOrchestrator.ts     # manual + 24h, tolerante a falhas
 │   └── download/DownloadService.ts  # file-transfer + fallback _system
 ├── data/cache.ts                    # IndexedDB (+ fallback em memória)
 ├── ui/
-│   ├── components/                  # PlatformTabs, AppCard, DownloadButton, Toast
+│   ├── components/                  # PlatformTabs, AppCard, DownloadButton, GitHubLink, Toast
 │   ├── pages/                       # CatalogPage, DetailPage
 │   └── styles.css
 ├── main.ts                          # wiring + roteamento por hash

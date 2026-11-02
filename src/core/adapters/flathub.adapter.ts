@@ -1,6 +1,6 @@
 import type { AppItem } from '../models/AppItem';
 import type { SourceAdapter } from './SourceAdapter';
-import { mapLimit, nomeArquivoDeUrl, nowIso, stripHtml, truncate } from '../util';
+import { mapLimit, nomeArquivoDeUrl, nowIso, stripHtml, truncate, urlRepoGitHub } from '../util';
 
 const APPSTREAM_LISTA_URL = 'https://flathub.org/api/v2/appstream';
 const APPSTREAM_DETALHE_URL = 'https://flathub.org/api/v2/appstream';
@@ -87,6 +87,7 @@ export class FlathubAdapter implements SourceAdapter {
         source: 'flathub',
         downloadUrl: `${FLATPAKREF_BASE}/${id}.flatpakref`,
         fallbackUrl: `https://flathub.org/apps/${id}`,
+        repoUrl: urlRepoGitHub(d?.urls?.homepage ?? null),
         fileName: `${id}.flatpakref`,
         sizeBytes: null,
         version: d?.releases?.[0]?.version,

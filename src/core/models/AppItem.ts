@@ -23,6 +23,8 @@ export interface AppItem {
   downloadUrl: string | null;
   /** Página oficial/da loja usada como fallback do download. */
   fallbackUrl: string | null;
+  /** Repositório oficial (GitHub) do app, quando conhecido — alimenta “Ver no GitHub”. */
+  repoUrl?: string | null;
   /** Nome do ficheiro com a extensão correta; null se indeterminável. */
   fileName: string | null;
   sizeBytes: number | null;
