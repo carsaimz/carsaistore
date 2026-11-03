@@ -15,10 +15,16 @@ const env = import.meta.env as Record<string, string | undefined>;
 
 const cache = createCache();
 
+// Estado persistente (cursors/pools de descoberta) guardado no próprio cache.
+const estado = {
+  get: (chave: string) => cache.getMeta(chave),
+  set: (chave: string, valor: string) => cache.setMeta(chave, valor),
+};
+
 // Uma instância por fonte — a ordem define a ordem da sincronização.
 const adaptadores: SourceAdapter[] = [
-  new FdroidAdapter(),
-  new GitHubAdapter({ token: env.VITE_GITHUB_TOKEN }),
+  new FdroidAdapter({ estado }),
+  new GitHubAdapter({ token: env.VITE_GITHUB_TOKEN, estado }),
   new ITunesAdapter(),
   new HomebrewAdapter(),
   new FlathubAdapter(),

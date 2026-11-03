@@ -1,5 +1,5 @@
 import type { AppItem } from '../../core/models/AppItem';
-import { formatBytes, repoUrlDe } from '../../core/util';
+import { formatBytes, repoUrlDe, rotuloVersao } from '../../core/util';
 import { ROTULO_FONTE } from '../labels';
 import { criarBotaoGitHub } from './GitHubLink';
 
@@ -50,10 +50,13 @@ export function createAppCard(app: AppItem, aoSelecionar: (app: AppItem) => void
   nome.textContent = app.name;
 
   const tamanho = formatBytes(app.sizeBytes);
+  const quantidadeVersoes = app.versions?.length ?? 0;
   const pedacos = [
     app.developer,
-    app.version ? `v${app.version}` : null,
+    rotuloVersao(app.version),
     tamanho === '—' ? null : tamanho,
+    // Assinala que há mais versões para escolher dentro do detalhe.
+    quantidadeVersoes > 1 ? `${quantidadeVersoes} versões` : null,
   ].filter((x): x is string => Boolean(x));
 
   const meta = document.createElement('span');

@@ -98,7 +98,7 @@ export class CatalogPage {
     this.campoBusca = document.createElement('input');
     this.campoBusca.type = 'search';
     this.campoBusca.className = 'busca';
-    this.campoBusca.placeholder = 'Buscar apps em todas as plataformas…';
+    this.campoBusca.placeholder = 'Buscar apps… (ex.: xcoder ou carsaimz/xcoder)';
     this.campoBusca.setAttribute('aria-label', 'Buscar aplicativos');
     this.campoBusca.autocomplete = 'off';
     this.campoBusca.spellcheck = false;
@@ -311,7 +311,11 @@ export class CatalogPage {
     try {
       await syncAll(this.adapters, this.cache, (p) => {
         if (p.status === 'inicio') this.statusEl.textContent = `${mensagem} ${p.source}…`;
+        else if (p.status === 'progresso')
+          this.statusEl.textContent = `${p.source}: ${p.total ?? 0} apps coletados…`;
         else if (p.status === 'ok') this.statusEl.textContent = `${p.source}: ${p.total ?? 0} apps no cache`;
+        else if (p.source === 'github')
+          this.statusEl.textContent = `${p.source}: falhou — limite da API? Configure VITE_GITHUB_TOKEN (ver README)`;
         else this.statusEl.textContent = `${p.source}: falhou — mantivemos o cache anterior`;
       });
       this.limiteVisivel = LOTE_VISIVEL;

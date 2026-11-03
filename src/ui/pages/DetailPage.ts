@@ -1,6 +1,6 @@
-import type { AppItem } from '../../core/models/AppItem';
+import type { AppItem, AppVersion } from '../../core/models/AppItem';
 import type { AppCache } from '../../data/cache';
-import { formatBytes, repoUrlDe } from '../../core/util';
+import { formatBytes, repoUrlDe, rotuloVersao } from '../../core/util';
 import { ROTULO_FONTE, ROTULO_PLATAFORMA } from '../labels';
 import { createAppIcon } from '../components/AppCard';
 import { createDownloadButton } from '../components/DownloadButton';
@@ -72,6 +72,12 @@ export class DetailPage {
     desc.textContent = app.description || 'Sem descrição disponível.';
     artigo.appendChild(desc);
 
+    // Versões: todas as conhecidas, mais recente primeiro — o utilizador
+    // escolhe qual baixar. Cada linha tem o seu próprio botão de download.
+    if (app.versions && app.versions.length > 0) {
+      artigo.appendChild(secaoVersoes(app));
+    }
+
     // Tags
     if (app.tags.length > 0) {
       const chips = document.createElement('div');
@@ -124,4 +130,73 @@ export class DetailPage {
 function formatarData(iso: string): string {
   const d = new Date(iso);
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleString('pt');
+}
+
+/**
+ * Seção “Versões”: uma linha por versão (mais recente primeiro), cada uma com
+ * botão de download próprio — é aqui que o utilizador escolhe qual baixar.
+ * A primeira linha vem assinalada como a mais recente.
+ */
+function secaoVersoes(app: AppItem): HTMLElement {
+  const secao = document.createElement('section');
+  secao.className = 'versoes';
+
+  const titulo = document.createElement('h3');
+  titulo.className = 'versoes__titulo';
+  titulo.textContent = `Versões (${app.versions!.length})`;
+  secao.appendChild(titulo);
+
+  app.versions!.forEach((versao, indice) => {
+    secao.appendChild(linhaVersao(app, versao, indice === 0));
+  });
+  return secao;
+}
+
+function linhaVersao(app: AppItem, versao: AppVersion, maisRecente: boolean): HTMLElement {
+  const linha = document.createElement('div');
+  linha.className = 'versao';
+
+  const info = document.createElement('div');
+  info.className = 'versao__info';
+
+  const topo = document.createElement('div');
+  topo.className = 'versao__topo';
+  const tag = document.createElement('span');
+  tag.className = 'versao__tag';
+  tag.textContent = rotuloVersao(versao.version) ?? versao.version;
+  topo.appendChild(tag);
+  if (maisRecente) {
+    const recente = document.createElement('span');
+    recente.className = 'versao__recente';
+    recente.textContent = 'mais recente';
+    topo.appendChild(recente);
+  }
+  info.appendChild(topo);
+
+  const detalhe = document.createElement('div');
+  detalhe.className = 'versao__meta';
+  const pedacos = [
+    versao.fileName,
+    versao.sizeBytes ? formatBytes(versao.sizeBytes) : null,
+    versao.publishedAt ? formatarData(versao.publishedAt) : null,
+  ].filter((x): x is string => Boolean(x));
+  detalhe.textContent = pedacos.join(' · ');
+  info.appendChild(detalhe);
+
+  if (versao.notes) {
+    const notas = document.createElement('details');
+    notas.className = 'versao__notas';
+    const sumario = document.createElement('summary');
+    sumario.textContent = 'Novidades';
+    const texto = document.createElement('p');
+    texto.textContent = versao.notes;
+    notas.append(sumario, texto);
+    info.appendChild(notas);
+  }
+
+  linha.appendChild(info);
+  if (versao.downloadUrl) {
+    linha.appendChild(createDownloadButton(app, versao));
+  }
+  return linha;
 }

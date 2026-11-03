@@ -1,4 +1,4 @@
-import type { AppItem } from '../../core/models/AppItem';
+import type { AppItem, AppVersion } from '../../core/models/AppItem';
 import { DownloadService, openExternal } from '../../core/download/DownloadService';
 import { nomeArquivoDeUrl } from '../../core/util';
 import { showToast } from './Toast';
@@ -8,28 +8,35 @@ import { showToast } from './Toast';
  * - downloadUrl === null → nasce como “Abrir na loja” (nunca tenta baixar);
  * - download direto falha → fallbackUrl aberto no navegador do sistema;
  * - ambos ausentes → “Download indisponível no momento” (desabilitado).
+ *
+ * `versao` (opcional) escolhe um binário específico da lista de versões do
+ * app — usado na lista de versões do detalhe. Sem versão, usa a atual
+ * (`app.downloadUrl`, a mais recente).
  */
-export function createDownloadButton(app: AppItem): HTMLButtonElement {
+export function createDownloadButton(app: AppItem, versao?: AppVersion): HTMLButtonElement {
+  const urlEscolhida = versao?.downloadUrl ?? app.downloadUrl;
+  const nomeEscolhido = versao?.fileName ?? app.fileName;
+
   const botao = document.createElement('button');
   botao.type = 'button';
-  botao.className = 'btn btn--primario btn--bloco';
+  botao.className = 'btn btn--primario' + (versao ? ' btn--versao' : ' btn--bloco');
 
   const pintaPadrao = (): void => {
-    if (app.downloadUrl) botao.textContent = 'Baixar';
+    if (urlEscolhida) botao.textContent = 'Baixar';
     else if (app.fallbackUrl) botao.textContent = 'Abrir na loja';
     else botao.textContent = 'Download indisponível no momento';
-    botao.disabled = !app.downloadUrl && !app.fallbackUrl;
+    botao.disabled = !urlEscolhida && !app.fallbackUrl;
   };
   pintaPadrao();
 
   botao.addEventListener('click', () => {
-    if (!app.downloadUrl) {
+    if (!urlEscolhida) {
       if (app.fallbackUrl) openExternal(app.fallbackUrl);
       return;
     }
 
-    const url = app.downloadUrl;
-    const nome = app.fileName ?? nomeArquivoDeUrl(url) ?? 'download';
+    const url = urlEscolhida;
+    const nome = nomeEscolhido ?? nomeArquivoDeUrl(url) ?? 'download';
     botao.disabled = true;
     botao.textContent = 'Preparando…';
 

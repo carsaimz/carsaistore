@@ -11,5 +11,11 @@ export interface SourceAdapter {
   readonly source: SourceId;
   /** Plataforma “âncora” da fonte (o GitHub, p.ex., deriva por item). */
   readonly platform: Platform;
-  fetchAll(): Promise<AppItem[]>;
+  /**
+   * Coleta os itens da fonte. `onPartial` (opcional) recebe lotes à medida
+   * que são normalizados — o orquestrador persiste cada lote imediatamente,
+   * para que uma falha no meio da coleta não perca o que já foi obtido.
+   * Os adaptadores podem ignorá-lo e devolver tudo de uma vez.
+   */
+  fetchAll(onPartial?: (lote: AppItem[]) => void | Promise<void>): Promise<AppItem[]>;
 }

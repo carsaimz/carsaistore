@@ -20,11 +20,20 @@ export interface AppCache {
   countByPlatform(platform: Platform): Promise<number>;
   search(platform: Platform, term: string): Promise<AppItem[]>;
   lastFetchedAt(source: SourceId): Promise<string | null>;
+  /** Lê um par chave→valor de estado interno (cursor/rotação dos adaptadores). */
+  getMeta(chave: string): Promise<string | null>;
+  /** Grava um par chave→valor de estado interno. */
+  setMeta(chave: string, valor: string): Promise<void>;
   clear(): Promise<void>;
 }
 
 const DB_NAME = 'carsai-store';
-const DB_VERSION = 1;
+// v2: agrupamento de versões — os ids antigos `github:repo@tag` (um card por
+// release) são eliminados na migração; os novos são `github:repo#plataforma`.
+const DB_VERSION = 2;
+
+/** Ids antigos do GitHub (um item por release/asset) que a v2 substitui. */
+const REGEX_ID_ANTIGO_GITHUB = /^github:.+@/;
 const STORE_APPS = 'apps';
 const STORE_META = 'meta';
 
@@ -55,11 +64,23 @@ export class IdbAppCache implements AppCache {
     if (!this.db) {
       this.db = new Promise((resolve, reject) => {
         const open = indexedDB.open(DB_NAME, DB_VERSION);
-        open.onupgradeneeded = () => {
+        open.onupgradeneeded = (evento) => {
           const db = open.result;
+          const versaoAntiga = (evento as IDBVersionChangeEvent).oldVersion;
           if (!db.objectStoreNames.contains(STORE_APPS)) {
             const store = db.createObjectStore(STORE_APPS, { keyPath: 'id' });
             store.createIndex('platform', 'platform', { unique: false });
+          } else if (versaoAntiga < 2) {
+            // Migração v1→v2: remove os itens antigos “um por release” do
+            // GitHub. A sincronização seguinte recria o catálogo agrupado.
+            const store = open.transaction!.objectStore(STORE_APPS);
+            const pedido = store.openCursor();
+            pedido.onsuccess = () => {
+              const cursor = pedido.result;
+              if (!cursor) return;
+              if (REGEX_ID_ANTIGO_GITHUB.test(String(cursor.key))) cursor.delete();
+              cursor.continue();
+            };
           }
           if (!db.objectStoreNames.contains(STORE_META)) {
             db.createObjectStore(STORE_META, { keyPath: 'chave' });
@@ -129,12 +150,21 @@ export class IdbAppCache implements AppCache {
   }
 
   async lastFetchedAt(source: SourceId): Promise<string | null> {
+    return this.getMeta(`fetched:${source}`);
+  }
+
+  async getMeta(chave: string): Promise<string | null> {
     const db = await this.abrir();
     const tx = db.transaction(STORE_META, 'readonly');
-    const reg = (await pedir(
-      tx.objectStore(STORE_META).get(`fetched:${source}`),
-    )) as MetaRecord | undefined;
+    const reg = (await pedir(tx.objectStore(STORE_META).get(chave))) as MetaRecord | undefined;
     return reg?.valor ?? null;
+  }
+
+  async setMeta(chave: string, valor: string): Promise<void> {
+    const db = await this.abrir();
+    const tx = db.transaction(STORE_META, 'readwrite');
+    tx.objectStore(STORE_META).put({ chave, valor } satisfies MetaRecord);
+    await esperarTransacao(tx);
   }
   async clear(): Promise<void> {
     const db = await this.abrir();
@@ -187,7 +217,15 @@ export class MemoryAppCache implements AppCache {
   }
 
   async lastFetchedAt(source: SourceId): Promise<string | null> {
-    return this.meta.get(`fetched:${source}`) ?? null;
+    return this.getMeta(`fetched:${source}`);
+  }
+
+  async getMeta(chave: string): Promise<string | null> {
+    return this.meta.get(chave) ?? null;
+  }
+
+  async setMeta(chave: string, valor: string): Promise<void> {
+    this.meta.set(chave, valor);
   }
 
   async clear(): Promise<void> {

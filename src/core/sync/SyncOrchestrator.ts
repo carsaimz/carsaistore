@@ -1,3 +1,4 @@
+import type { AppItem } from '../models/AppItem';
 import type { SourceAdapter } from '../adapters/SourceAdapter';
 import type { AppCache } from '../../data/cache';
 
@@ -6,7 +7,7 @@ export const SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
 export interface SyncProgress {
   source: string;
-  status: 'inicio' | 'ok' | 'falha';
+  status: 'inicio' | 'progresso' | 'ok' | 'falha';
   total?: number;
   error?: string;
 }
@@ -16,7 +17,8 @@ export type SyncListener = (progresso: SyncProgress) => void;
 /**
  * Sincroniza TODAS as fontes, uma a uma. Regras do documento:
  * - a falha de UMA fonte não interrompe as demais;
- * - em falha, o cache anterior da fonte é preservado;
+ * - em falha, o cache anterior da fonte é preservado — e, como os lotes são
+ *   persistidos durante a coleta, o que já chegou também fica;
  * - a UI apenas é avisada via listener (para mostrar progresso).
  */
 export async function syncAll(
@@ -27,7 +29,16 @@ export async function syncAll(
   for (const adapter of adapters) {
     onProgress?.({ source: adapter.source, status: 'inicio' });
     try {
-      const items = await adapter.fetchAll();
+      const acumulado: AppItem[] = [];
+      const items = await adapter.fetchAll((lote) => {
+        acumulado.push(...lote);
+        // Persiste o lote na hora (sem marcar a fonte — isso só no fim, se
+        // tudo correu bem, para que uma coleta interrompida se repita depois).
+        void cache
+          .upsertMany(adapter.source, lote, { tocarMeta: false })
+          .catch(() => undefined);
+        onProgress?.({ source: adapter.source, status: 'progresso', total: acumulado.length });
+      });
       await cache.upsertMany(adapter.source, items);
       onProgress?.({ source: adapter.source, status: 'ok', total: items.length });
     } catch (error) {

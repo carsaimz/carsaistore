@@ -88,6 +88,15 @@ export function formatBytes(bytes: number | null | undefined): string {
   return `${num} ${unidades[i]}`;
 }
 
+/**
+ * Rótulo de versão sem “v” duplicado: “v1.2” fica “v1.2”, “1.2” vira “v1.2”
+ * (evita exibir “vv1.2” em tags que já trazem o prefixo).
+ */
+export function rotuloVersao(versao: string | undefined): string | null {
+  if (!versao) return null;
+  return /^v[\d.]/i.test(versao) ? versao : `v${versao}`;
+}
+
 /** Último segmento do caminho da URL, se tiver extensão; senão null. */
 export function nomeArquivoDeUrl(url: string): string | null {
   try {

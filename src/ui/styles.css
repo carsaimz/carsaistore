@@ -588,6 +588,98 @@ input {
   overflow-wrap: anywhere;
 }
 
+/* ===== Versões (detalhe) ===== */
+.versoes {
+  border-top: 1px solid var(--borda);
+  margin-top: 4px;
+  padding-top: 14px;
+  margin-bottom: 16px;
+}
+
+.versoes__titulo {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  color: var(--texto);
+}
+
+.versao {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px dashed var(--borda);
+}
+
+.versao:last-child {
+  border-bottom: none;
+}
+
+.versao__info {
+  min-width: 0;
+  flex: 1;
+}
+
+.versao__topo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.versao__tag {
+  font-weight: 700;
+  font-size: 0.92rem;
+  overflow-wrap: anywhere;
+}
+
+.versao__recente {
+  font-size: 0.66rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ok);
+  background: rgba(47, 191, 113, 0.14);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.versao__meta {
+  color: var(--muted);
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+  margin-top: 2px;
+}
+
+.versao__notas {
+  margin-top: 6px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.versao__notas summary {
+  cursor: pointer;
+  color: var(--primario);
+  user-select: none;
+  min-height: 28px;
+  line-height: 28px;
+}
+
+.versao__notas p {
+  margin: 6px 0 0;
+  line-height: 1.5;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+/* Botão de download compacto de cada linha de versão */
+.btn--versao {
+  flex: none;
+  min-height: 38px;
+  padding: 7px 14px;
+  font-size: 0.84rem;
+}
+
 /* ===== Toasts ===== */
 #toast-host {
   position: fixed;
@@ -712,6 +804,14 @@ input {
 
   .app-card__gh {
     width: 40px;
+  }
+
+  .versao {
+    flex-wrap: wrap;
+  }
+
+  .btn--versao {
+    flex: 1 1 100%;
   }
 }
 
